@@ -1,0 +1,6 @@
+name = civicrm test
+description = COMPANY->STATES->Cities
+package = BRANCH
+version = VERSION
+core = 7.x
+files[] = branch.module
