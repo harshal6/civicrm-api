@@ -1,0 +1,183 @@
+<?php
+
+ function branch_menu() {
+  $items = array();
+  $items['ajax-branch-get-values'] = array(
+                                           'page callback' => 'ajax_branch_get_values',
+                                           'access arguments' => array('access content'),
+                                           );
+  return $items;
+  }
+
+ function branch_form_webform_client_form_248_alter(&$form,&$form_state,&$form_id) {
+   $form['#attached']['js'] = array(drupal_get_path('module','branch') . '/branch.js',drupal_get_path('module','civicrm') . '/js/rest.js',drupal_get_path('module','civicrm') . '/js/Contact.js',drupal_get_path('module','civicrm') . '/js/noconflict.js',drupal_get_path('module','civicrm') . '/js/Common.js');
+   $form['Main-Company'] = array (
+                                  '#type'     => 'select',
+                                  '#title'    => 'Company Main Branch',
+                                  '#options' => array( $_SESSION['branch']['main_comp1']),
+                                 );
+   $form['Sub-Company'] = array (
+                                 '#type'     => 'select',
+                                 '#title'    => 'Company Sub Branch',
+                                 '#options' =>array( $_SESSION['branch']['sub_company']),
+     );
+   $form['State'] = array (
+                           '#type'     => 'select',
+                           '#title'    => 'State using form alter',
+                           '#options' => array($_SESSION['branch']['states_with_keys']),
+                           );
+   $form['City1'] = array (
+                           '#type'     => 'select',
+                           '#title'    => 'only cities selected earlier',
+                           '#options' => array($_SESSION['branch']['city_name']),
+
+                           );
+   $form['City2'] = array (
+                           '#type'     => 'select',
+                           '#title'    => 'City with state keys',
+                           '#options' => array(  $_SESSION['city']),
+                           );
+  $form['City3'] = array (
+                          '#type'     => 'select',
+                          '#title'    => 'City withs ',
+                          '#options' => array(  $_SESSION['city']),
+                          );
+  $get_relationship = civicrm_api("Relationship","get", array ('version'=>3,'sequential'=>1, 'relationship_type_id'=> '10'));
+
+  $get_main_branch = array();
+  $get_sub_branch = array();
+
+  foreach($get_relationship['values'] as $key=>$values) {
+    $get_main_branch[$key] = $values['contact_id_a'];
+    $get_sub_branch[$key] = $values['contact_id_b'];
+  }
+
+   $sortname = array();
+   $get_main_branch_details = array();
+   $get_sub_branch_details = array();
+
+   foreach($get_main_branch as $key=>$values) {
+
+     $get_main_branch_details[$key] = civicrm_api("Contact","get", array ('version'=>3,'sequential' =>1,'contact_type' =>'Organization','contact_id'=> $values));
+   }
+   foreach($get_sub_branch as $key=>$values) {
+     $get_sub_branch_details[$key] = civicrm_api("Contact","get", array ('version'=>3,'sequential' =>1,'contact_type' =>'Organization','contact_id'=> $values));
+   }
+
+   $sort_name_main = array();
+   $sort_name_sub = array();
+
+   foreach($get_main_branch_details as $key=>$values) {
+     $contact_id_a =  $get_main_branch[$key];
+     $sort_name_main[$contact_id_a] = $get_main_branch_details[$key]['values'][0]['sort_name'];
+     $_SESSION['branch']['main_comp1'][$contact_id_a] = $sort_name_main[$contact_id_a];
+   }
+
+   foreach($get_sub_branch_details as $key=>$values) {
+     $sort_name_sub[$key] = $get_sub_branch_details[$key]['values'][0]['sort_name'];
+     $_SESSION['branch']['sub_company'][$key] = $sort_name_sub[$key];
+   }
+
+
+   $option_main_contact_id = $_SESSION['branch']['main_company_option_selected'];
+   $get_address_details_state_id = civicrm_api("Address","get",array('version'=> 3,'sequential'=>1));
+
+
+   foreach ($get_address_details_state_id['values'] as $key=>$values) {
+     $state_id[$key] = $get_address_details_state_id['values'][$key]['state_province_id'];
+     $city_name[$key] = $get_address_details_state_id['values'][$key]['city'];
+     $_SESSION['branch']['city_name_with_state_keys'][$state_id[$key]] = $city_name[$key];
+
+     if ($state_id[$key] == $_SESSION['branch']['state_code']) {
+
+       $get_related_state_id_which_city_exists[$key] = $get_address_details_state_id['values'][$key]['state_province_id'];
+       $get_address_details[$key] = civicrm_api("Address","get",array('version'=> 3,'sequential'=> 1,'state_province_id'=>$get_related_state_id_which_city_exists[$key]));
+     }
+
+   }
+
+   $sql = array();
+   $query = "SELECT city  FROM testsns_civicrm.civicrm_contact,testsns_civicrm.civicrm_address";
+   $query .= " WHERE contact_type = 'Organization' AND civicrm_contact.id = civicrm_address.contact_id ";
+   $sql = db_query($query,array('fetch' => PDO::FETCH_ASSOC));
+   $records = array();
+   $records = $sql->fetchAll();
+
+   $get_value_of_state_selected = civicrm_api("Address","get",array('version'=>3,'sequential'=>1, 'state_province_id'=>$_SESSION['branch']['state_code']));
+   $state_id = array();
+   $city = array();
+ }
+
+
+ function ajax_branch_get_values() {
+
+   $option_main_contact_id = $_POST['option_main_contact_id'];
+   $_SESSION['branch']['main_company_option_selected'] = $option_main_contact_id;
+   $state_val = $_POST['state_val'];
+   $_SESSION['branch']['state_code'] = $state_val;
+   
+   $options = array();
+   $options[1000] = 'Alabama';
+   $options[1001] = 'Alaska';
+   $options[1052] =  'Americans Samoa';
+   $options[1002] = 'Arizona';
+   $options[1003] = 'Arkansas';
+   $options[1060] =  'American Forces Americans';
+   $options[1059] = 'Armed Forces Europe';
+   $options[1061] = 'Armed Forces Pacific';
+   $options[1004] = 'California';
+   $options[1005] = 'Colorado';
+   $options[1006] = 'Connecticut';
+   $options[1007] = 'Delaware';
+   $options[1050] = 'District of Columbia';
+   $options[1008] = 'Florida';
+   $options[1009] = 'Georgia';
+   $options[1053] = 'Guam';
+   $options[1010] = 'Hawaii';
+   $options[1011] = 'Idaho';
+   $options[1012] = 'Illinois';
+   $options[1013] = 'Indiana';
+   $options[1014] = 'Iowa';
+   $options[1015] = 'Kansas';
+   $options[1016] = 'Kentucky';
+   $options[1017] = 'Louisiana';
+   $options[1018] = 'Maine';
+   $options['MH'] = 'Marshall Islands';
+   $options[1019] = 'Maryland';
+   $options[1020] = 'Massachusetts';
+   $options[1021] = 'Michigan';
+   $options[1022] = 'Minnesota';
+   $options[1023] = 'Mississippi';
+   $options[1024] = 'Missouri';
+   $options[1025] = 'Montana';
+   $options[1026] = 'Nebraska';
+   $options[1027] = 'Nevada';
+   $options[1028] = 'New Hampshire';
+   $options[1029] = 'New Jersey';
+   $options[1030] = 'New Mexico';
+   $options[1031] = 'New York';
+   $options[1032] = 'North Carolina';
+   $options[1033] = 'North Dakota';
+   $options[1055] = 'Northern Marianas Islands';
+   $options[1034] = 'Ohio';
+   $options[1035] = 'Oklahoma';
+   $options[1036] = 'Oregon';
+   $options['PW'] = 'Palau';
+   $options[1037] = 'Pennsylvania';
+   $options[1056] = 'Puerto Rico';
+   $options[1038] = 'Rhode Island';
+   $options[1039] = 'South Carolina';
+   $options[1040] = 'South Dakota';
+   $options[1041] = 'Tennessee';
+   $options[1042] = 'Texas';
+   $options[1058] = 'United States Minor Outlying Islands';
+   $options[1043] = 'Utah';
+   $options[1044] = 'Vermont';
+   $options[1057] = 'Virgin Islands';
+   $options[1045] = 'Virginia';
+   $options[1046] = 'Washington';
+   $options[1047] = 'West Virginia';
+   $options[1048] = 'Wisconsin';
+   $options[1049] = 'Wyoming';
+   $_SESSION['branch']['states_with_keys'] = $options ;
+ }
